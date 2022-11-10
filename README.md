@@ -3,9 +3,10 @@
 
 
 plots:{
+ title="",
  equal:false,                             // equal axis limits for all plots
  colors:["#123","#456"],                  // color cycle 
- columns:-2,                              // plots per row, negative: column major order
+ cols:-2,                              // plots per row, negative: column major order
  font1:"12px monospace",                  // title/axis font (canvas syntax)
  font2:"10px monospace",                  // tic font
  plots:[plot,plot,plot],
@@ -16,7 +17,6 @@ plot:{
  type:"xy",                               // xy|polar|ring|ampang|raster
  limits:[xmin,xmax,ymin,ymax,zmin,zmax],
  xlabel:"",ylabel:"",title:"",
- xunit:"", yunit:"", zunit:"",
  lines:[line,line]
 }
 
