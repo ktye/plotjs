@@ -6,9 +6,10 @@ plots:{
  title="",
  equal:false,                             // equal axis limits for all plots
  colors:["#123","#456"],                  // color cycle 
- cols:-2,                              // plots per row, negative: column major order
+ cols:-2,                                 // plots per row, negative: column major order
  font1:"12px monospace",                  // title/axis font (canvas syntax)
  font2:"10px monospace",                  // tic font
+ fullscreen:2,                            // fullscreen index (toggle with dblclick)
  plots:[plot,plot,plot],
  table:table,
 }
