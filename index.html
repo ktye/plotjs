@@ -16,8 +16,8 @@ let examples={
     xlabel:"x-label",
     ylabel:"y-label",
     lines:[
-     {y:iota(100,1,1)},
-     {y:iota(100,1,1)},
+     {y:iota(100,1,1).map(x=>Math.sin(0.1*x))},
+     {y:iota(100,1,1).map(x=>Math.cos(0.09*x))},
     ],
    },
    {
@@ -26,8 +26,8 @@ let examples={
     xlabel:"x-label",
     ylabel:"y-label",
     lines:[
-     {y:iota(100,1,1)},
-     {y:iota(100,1,1)},
+     {y:iota(100,1,1).map(x=>1.1+Math.sin(0.1*x))},
+     {y:iota(100,1,1).map(x=>0.4+Math.sin(0.1*x))},
     ],
    }
   ],
@@ -69,14 +69,14 @@ function init(){
  body{margin:0;border:none;overflow:hidden}
  #plotdiv{width:100vw;}
  #canvas{background:grey;border:none}
- #slider{height:18px;margin:0px}
+ #slider{margin:0px}
  #listbx{border:none;font-family:monospace}
  .plot-canvas-v{width:100vw;height:calc(70vh - 10px)}
- .plot-canvas-h{height:calc(100vh - 20px);width:65vw}
- .plot-slider-v{width:100vw}
- .plot-slider-h{width:65vw}
+ .plot-canvas-h{height:calc(100vh - 10px);width:calc(65vw - 10px)}
+ .plot-slider-v{width:100vw;height:18px}
+ .plot-slider-h{width:18px;height:100vh}
  .plot-listbx-v{width:100vw;height:calc(30vh - 10px);}
- .plot-listbx-h{width:35vw;height:100vh;position:absolute;top:0;right:0}
+ .plot-listbx-h{width:calc(35vw - 10px);height:100vh;position:absolute;top:0;right:0}
  #examples{position:absolute;right:0;bottom:0}
 </style>
 </head>

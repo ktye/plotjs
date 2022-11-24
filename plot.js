@@ -2,7 +2,8 @@ let plotjs=(()=>{
 
 let ge=function(x){return document.getElementById(x)}
 let pd=function(e){e.preventDefault();e.stopPropagation()}
-let min=function(...x){return Math.min(...x)},max=function(...x){return Math.max(...x)},floor=x=>Math.floor(x),ceil=x=>Math.ceil(x)
+let ct=(x,y)=>x.classList.contains(y)
+let vmin=x=>Math.min(...x),vmax=x=>Math.max(...x),min=Math.min,max=Math.max,floor=Math.floor,ceil=Math.ceil
 
 function plots(p,canvas,slider,listbx){
  canvas.width=canvas.clientWidth;canvas.height=canvas.clientHeight
@@ -41,6 +42,7 @@ function plots(p,canvas,slider,listbx){
  }
  if(slider!==undefined){
   slider.ondblclick=function(e){
+   slider.setAttribute("orient",ct(slider,"plot-slider-v")?"vertical":"horizontal")
    canvas.classList.toggle("plot-canvas-h");canvas.classList.toggle("plot-canvas-v")
    slider.classList.toggle("plot-slider-h");slider.classList.toggle("plot-slider-v")
    listbx.classList.toggle("plot-listbx-h");listbx.classList.toggle("plot-listbx-v")
@@ -74,13 +76,22 @@ function plot(p,c,w,h,plts){
  c.strokeStyle="green";c.lineWidth=1;c.strokeRect(1,1,w-2,h-2);
  c.strokeStyle="black"
  switch(p.type){
- case"xy":return    xyplot(p,c,w,h,plts)
- case"polar":    return polarplot(p,c,w,h,plts)
+ case"xy":   return    xyplot(p,c,w,h,plts)
+ case"polar":return polarplot(p,c,w,h,plts)
  default:throw new Error("unknown plot type: "+p.type)
 }}
 
-function xyplot(p,c,w,h,plts){
- let aw=max(0,w-plts.xyw),ah=max(0,h-plts.xyh)
+function xyplot(p,c,w,h,plts){if(!p.lines)return
+ p.lines=p.lines.map(l=>{l.x=("undefined"==typeof l.x)?iota(l.y.length):l.x;return l})
+ let aw=max(0,w-plts.xyw),ah=max(0,h-plts.xyh),li=limits(p),[x0,x1,y0,y1]=autoxy(p.lines,li),
+ xs=aw/(x1-x0),ys=ah/(y1-y0),xx=x=>xs*(x-x0),yy=y=>ys*(y0-y),
+ ln=(l,i)=>{let x=l.x,y=l.y;if(!x.length)return
+  if("undefined"==typeof l.style||l.style.includes("-")){
+   c.beginPath();c.moveTo(xx(x[0]),yy(y[0]));for(let j=0;j<x.length;j++){c.lineTo(xx(x[j]),yy(y[j]))}
+   console.log("colors",i,plts.colors[i%plts.colors.length],plts.colors)
+   c.strokeStyle=plts.colors[i%plts.colors.length];c.lineWidth=(l.size?l.size:2)
+   c.stroke()}
+  }
  
  c.strokeRect(plts.xyx,plts.xyy,aw,ah)
  console.log(w,h,center(plts.xyx+aw),plts.tih,p.title)
@@ -90,6 +101,7 @@ function xyplot(p,c,w,h,plts){
  c.textBaseline="bottom";c.fillText(p.xlabel,plts.xyx+center(aw),h)
  c.textBaseline="top"   ;text90(c,0,center(h),p.ylabel)
  
+ c.translate(plts.xyx,ah+plts.xyy);c.beginPath();c.rect(0,-ah,aw,ah);c.clip();p.lines.map(ln)
 }
 function polarplot(p,c,w,h,plts){
  circle(c,w/2,h/2,-3+w/2)
@@ -115,6 +127,17 @@ function layout(c,plts){                           //computed sizes depending on
 function center(x){return floor(x/2)}
 function circle(c,x,y,r){c.beginPath();c.arc(x,y,r,0,2*Math.PI);c.stroke()}
 function text90(c,x,y,t){c.save();c.translate(x,y);c.rotate(-Math.PI/2);c.fillText(t,0,0);c.restore()}
+function limits(p){let r=[0,0,0,0,0,0],l=p.limits;if("undefined"===typeof l)return r
+ switch(l.length){case 0:return r;case 1:return[0,0,0,r[0],0,0];case 2:return[r[0],r[1],0,0,0,0];
+ case 3:return[r[0],r[1],0,r[2],0,0];case 4:return l.concat([0,0]);default:return l}}
+function autoxy(L,a){let r=a.slice(0,4)
+ console.log("autoxy",L)
+ if(r[0]==r[1]){r[0]=vmin(L.map(l=>vmin(l.x))),r[1]=vmax(L.map(l=>vmax(l.x)))}
+ if(r[2]==r[3]){r[2]=vmin(L.map(l=>vmin(l.y))),r[3]=vmax(L.map(l=>vmax(l.y)))}
+ return r
+}
+function iota(n){return[...Array(n).keys()]}
+
 
 function rm(p){while(p.firstChild)p.removeChild(p.firstChild);return p}
 
