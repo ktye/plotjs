@@ -16,8 +16,8 @@ let examples={
     xlabel:"x-label",
     ylabel:"y-label",
     lines:[
-     {y:iota(100,1,1).map(x=>Math.sin(0.1*x))},
-     {y:iota(100,1,1).map(x=>Math.cos(0.09*x))},
+     {y:iota(100).map(x=>Math.sin(0.1*x))},
+     {y:iota(100).map(x=>Math.cos(0.09*x))},
     ],
    },
    {
@@ -26,8 +26,8 @@ let examples={
     xlabel:"x-label",
     ylabel:"y-label",
     lines:[
-     {y:iota(100,1,1).map(x=>1.1+Math.sin(0.1*x))},
-     {y:iota(100,1,1).map(x=>0.4+Math.sin(0.1*x))},
+     {y:iota(100).map(x=>1.1+Math.sin(0.1*x))},
+     {y:iota(100).map(x=>0.4+Math.sin(0.1*x))},
     ],
    }
   ],
@@ -39,8 +39,8 @@ let examples={
     title:"channel 1",
     ylabel:"r-label",
     lines:[
-     {y:iota(100,1,1)},
-     {y:iota(100,1,1)},
+     {y:iota(100).map(x=>Math.random(x)),z:iota(100).map(x=>2+Math.random(x))},
+     {y:iota(100).map(x=>1+Math.random(x)),z:iota(100).map(x=>-2+Math.random(x))},
     ],
    },
    {
@@ -48,8 +48,8 @@ let examples={
     title:"channel 2",
     xlabel:"r-label",
     lines:[
-     {y:iota(100,1,1)},
-     {y:iota(100,1,1)},
+     {y:iota(100).map(x=>-2+Math.random(x)),z:iota(100).map(x=>2+Math.random(x))},
+     {y:iota(100).map(x=>-1+Math.random(x)),z:iota(100).map(x=>-2+Math.random(x))},
     ],
    }
   ],
@@ -62,7 +62,7 @@ function init(){
  let keys=Object.keys(examples)
  for(let i=0;i<keys.length;i++){let o=ce("option");o.textContent=keys[i];ge("examples").appendChild(o)}
  ge("examples").onchange=function(e){plotjs.plots(examples[keys[e.target.selectedIndex]],ge("canvas"),ge("slider"),ge("listbx"))}
- plotjs.plots(examples[keys[0]],ge("canvas"),ge("slider"),ge("listbx"))
+ plotjs.plots(examples[keys[1]],ge("canvas"),ge("slider"),ge("listbx"))
 }
 </script>
 <style>
