@@ -15,18 +15,20 @@ function plots(p,canvas,slider,listbx){
  p.cols   =("cols"  in p)?p.cols  :0
  p.font1  =("font1" in p)?p.font1 :"20px monospace"
  p.font2  =("font2" in p)?p.font2 :"16px monospace"
+ p.hi     =("hi"    in p)?p.hi    :{lines:[],point:null}
  p=layout(c,p)
  
+ let rects=[]
  c.fillStyle="white";c.fillRect(0,0,width,height);c.font=p.font1
- if("fullscreen" in p){
-  plot(p.plots[p.fullscreen],c,width,height,p)
- }else if(p.plots){
+ if(p.plots){
   let np=p.plots.length,nc=Math.abs(p.cols);nc=nc?nc:np
   let nr=ceil(np/nc),w=width/nc,h=height/nr
   for(let i=0,j=0;i<np;i++){
    c.save()
    c.translate(w*(i%nc),j*h)
-   plot(p.plots[(p.cols<0)?j+nr*(i%nc):i],c,w,h,p)
+   let r=[w*(i%nc),j*h,w,h]
+   r.push(plot(p.plots[(p.cols<0)?j+nr*(i%nc):i],c,w,h,p))
+   rects.push(r)
    c.restore()
    if(0==(1+i)%nc)j++;if((j==nr-1)&&(np%nc))w=width/(np%nc)
   }
@@ -36,8 +38,15 @@ function plots(p,canvas,slider,listbx){
  {let r;window.addEventListener("resize",function(){clearTimeout(r);r=setTimeout(replot, 200)})}
  
  canvas.ondblclick=function(e){
-  if("fullscreen" in p)delete p.fullscreen
-  else                        p.fullscreen=0 //todo index from x/y
+  let r=e.target.getBoundingClientRect()
+  let x=e.clientX-r.left, y=e.clientY-r.top
+  let ri=targetRect(x,y,rects)
+  let [line,point]=snapPoint(x,y,rects[ri],p.plots[ri])
+  p.hi={lines:[line],point:point}
+  if(slider!==undefined){
+   slider.min=0;slider.max=p.plots[ri].lines[line].y.length-1
+   slider.value=point
+  }
   replot(true)
  }
  if(slider!==undefined){
@@ -46,9 +55,11 @@ function plots(p,canvas,slider,listbx){
    canvas.classList.toggle("plot-canvas-h");canvas.classList.toggle("plot-canvas-v")
    slider.classList.toggle("plot-slider-h");slider.classList.toggle("plot-slider-v")
    listbx.classList.toggle("plot-listbx-h");listbx.classList.toggle("plot-listbx-v")
+   replot(true)
   }
   slider.onchange=function(e){
-   console.log("slider:",e.target.value)
+   p.hi.point=slider.value
+   replot(true)
   }
  }
  if(listbx!==undefined){
@@ -57,6 +68,9 @@ function plots(p,canvas,slider,listbx){
   //listbox.style.hidden==empty
   //if(empty)return
   listbx.onchange=function(e){
+   p.hi.lines=Array.from(e.target.selectedOptions).map(x=>x.index)
+   p.hi.point=null
+   replot(true)
   }
  }
  //..
@@ -69,12 +83,8 @@ function plot(p,c,w,h,plts){
  p.title =("title"  in p)?p.title: ""
  p.xlabel=("xlabel" in p)?p.xlabel:""
  p.ylabel=("ylabel" in p)?p.ylabel:""
- //if(w>h){let ww=(p.type=="polar")?h:(w>1.5*h)?floor(1.5*h):w;c.translate(floor((w-ww)/2),0);w=ww}
- //if(h>w){let hh=w                                           ;c.translate(0,floor((h-hh)/2));h=hh} 
- //c.fillStyle="black";c.fillText(p.title, w/2, h/2);
- //c.strokeStyle="green";c.lineWidth=2;c.strokeRect(1,1,w-2,h-2);
  
- c.translate(floor(w/2),floor(h/2))
+ //c.translate(floor(w/2),floor(h/2))
  c.fillStyle=c.strokeStyle="black";c.lineWidth=2
  switch(p.type){
  case"xy":   return    xyplot(p,c,w,h,plts)
@@ -82,16 +92,18 @@ function plot(p,c,w,h,plts){
  default:throw new Error("unknown plot type: "+p.type)
 }}
 
-function xyplot(p,c,w,h,plts){if(!p.lines)return;w=min(w,1.5*h),h=min(h,w);c.translate(-floor(w/2),-floor(h/2))
+function xyplot(p,c,w,h,plts){if(!p.lines)return;w=min(w,1.5*h),h=min(h,w);
  p.lines=p.lines.map(l=>{l.x=("undefined"==typeof l.x)?iota(l.y.length):l.x;return l})
  let aw=max(0,w-plts.xyw),ah=max(0,h-plts.xyh),li=limits(p),[x0,x1,y0,y1]=autoxy(p.lines,li),
- xs=aw/(x1-x0),ys=ah/(y1-y0),xx=x=>xs*(x-x0),yy=y=>ys*(y0-y),t
+ xs=aw/(x1-x0),ys=ah/(y1-y0),xx=x=>xs*(x-x0),yy=y=>ys*(y0-y),t,
+ mark=(x,y)=>{align(c,6+2*+(xx(x)>w/2));c.beginPath();c.fillText(x+", "+y,xx(x),yy(y))}
  ln=(l,i)=>{let x=l.x,y=l.y;if(!x.length)return
   if("undefined"==typeof l.style||l.style.includes("-")){
    c.beginPath();c.moveTo(xx(x[0]),yy(y[0]));for(let j=0;j<x.length;j++){c.lineTo(xx(x[j]),yy(y[j]))}
-   console.log("colors",i,plts.colors[i%plts.colors.length],plts.colors)
-   c.strokeStyle=plts.colors[i%plts.colors.length];c.lineWidth=(l.size?l.size:2)
-   c.stroke()}}
+   c.strokeStyle=plts.colors[i%plts.colors.length];c.lineWidth=hiline(plts,i)*(l.size?l.size:2)
+   c.stroke()}
+  let hp=plts.hi.point;if((hp!==null)&&(i==plts.hi.lines[0])&&(hp>=0)&&(hp<x.length)){c.beginPath();c.arc(xx(x[hp]),yy(y[hp]),5,0,2*Math.PI);c.fillStyle=c.strokeStyle;c.fill();mark(x[hp],y[hp])}
+ }
  c.strokeRect(plts.xyx,plts.xyy,aw,ah)
  align(c,1)
  c.fillText(p.title, plts.xyx+center(aw),0)
@@ -101,14 +113,17 @@ function xyplot(p,c,w,h,plts){if(!p.lines)return;w=min(w,1.5*h),h=min(h,w);c.tra
  c.lineWidth=2;c.font=plts.font2
  align(c,1);ncTic(x0,x1).map(x=>{t=String(x);x=xx(x);c.beginPath();c.moveTo(x,0);c.lineTo(x,plts.tl);c.stroke();c.fillText(t,x,plts.tl)})
  align(c,5);ncTic(y0,y1).map(y=>{t=String(y);y=yy(y);c.beginPath();c.moveTo(-plts.tl,y);c.lineTo(0,y);c.stroke();c.fillText(t,-plts.tl,y)})
- c.beginPath();c.rect(0,-ah,aw,ah);c.clip();p.lines.map(ln)
+ c.beginPath();c.rect(0,-ah,aw,ah);c.clip();p.lines.map(ln);return(l,j)=>[plts.xyx+xx(l.x[j]),ah+plts.xyy+yy(l.y[j])]
 }
-function polarplot(p,c,w,h,plts){if(!p.lines)return;
+function polarplot(p,c,w,h,plts){if(!p.lines)return;c.translate(floor(w/2),floor(h/2))
  let ra=floor(min(w-plts.pw,h-plts.ph-plts.tih)/2),raa=ra+plts.tl,al=[7,6,3,3,0,0,1,2,2,5,5,8],
  li=limits(p),r1=autop(p.lines,li[3]),sc=ra/r1,
  ln=(l,i)=>{let x=l.y,y=l.z;if(!x.length)return
-  let s=l.size?l.size:3;c.fillStyle=plts.colors[i%plts.colors.length]
-  x.map((x,i)=>{c.beginPath();c.arc(sc*x,sc*y[i],s,0,2*Math.PI);c.fill()})}
+  let mark=j=>{c.beginPath();c.fillText(absang(x[j],y[j]),sc*x[j],sc*y[j])}
+  let s=hiline(plts,i)*(l.size?l.size:3);c.fillStyle=plts.colors[i%plts.colors.length]
+  let hp=j=>hipoint(plts,i,j)
+  x.map((x,i)=>{c.beginPath();c.arc(sc*x,sc*y[i],s*hp(i),0,2*Math.PI);c.fill()})
+  x.map((x,i)=>{if(hp(i)>1)mark(i)})}
  c.strokeRect(-w/2,-h/2,w,h)
  c.translate(0,floor(plts.tih/2))
  circle(c,0,0,ra)
@@ -119,7 +134,7 @@ function polarplot(p,c,w,h,plts){if(!p.lines)return;
  c.font=plts.font2;iota(12).map(i=>{let p=30*i*Math.PI/180,x=Math.sin(p),y=-Math.cos(p);align(c,al[i]);c.beginPath();c.moveTo(ra*x,ra*y);c.lineTo(raa*x,raa*y);c.stroke();c.fillText(""+30*i,raa*x,raa*y)})
  c.strokeStyle="#ccc";ncTic(0,r1).slice(1,-1).map(t=>circle(c,0,0,sc*t))
  c.beginPath();c.moveTo(-ra,0);c.lineTo(ra,0);c.stroke();c.beginPath();c.moveTo(0,-ra);c.lineTo(0,ra);c.stroke()
- c.beginPath();c.arc(0,0,ra,0,2*Math.PI);c.clip();p.lines.map(ln)
+ c.beginPath();c.arc(0,0,ra,0,2*Math.PI);c.clip();p.lines.map(ln);return(l,j)=>[floor(w/2)+sc*l.y[j],floor(h/2)+floor(plts.tih/2)+sc*l.z[j]]
 }
 function h1(plts){let h=parseFloat(plts.font1);return isNaN(h)?20:ceil(h)}
 function h2(plts){let h=parseFloat(plts.font2);return isNaN(h)?14:ceil(h)}
@@ -139,6 +154,24 @@ function layout(c,plts){                           //computed sizes depending on
  plts.pw =2*t.width+2*plts.tl                      //polar sum of h margins
  plts.ph =2*plts.tl+2*plts.tlh                     //polar sum of v margins (sym without tih)
  return plts
+}
+
+function hiline(p,i){return (p.hi.lines.includes(i)&&p.hi.point===null) ? 2 : 1}
+function hipoint(p,i,j){return (p.hi.lines.length==1&&p.hi.lines[0]==i&&p.hi.point==j) ? 2 : 1}
+function absang(x,y){let p=180/Math.PI*Math.atan2(x,-y);p=(p<0)?p+360:p;return Math.hypot(x,y).toPrecision(4)+"@"+p.toPrecision(4)}
+function targetRect(x,y,rects){for(let i=0;i<rects.length;i++){let R=rects[i];if((x>=R[0])&&(y>=R[1])&&(x<=R[0]+R[2])&&(y<=R[1]+R[3])){return i}};return null}
+function snapPoint(x,y,rect,p){x-=rect[0];y-=rect[1]
+ let line=0,point=0,dist=Infinity,f=rect[4]
+ for(let i=0;i<p.lines.length;i++){
+  let l=p.lines[i]
+  for(let j=0;j<l.y.length;j++){
+   let [X,Y]=f(l,j);X-=x;Y-=y
+   let d=X*X+Y*Y
+   if((i==0)&&(j==0))console.log("i/j",i,j,"XY",X,Y,"xy",x,y,"d",d)
+   if(d<dist){dist=d;line=i;point=j}
+  }
+ }
+ return [line,point]
 }
 
 function align(c,x){c.textBaseline=["top","middle","bottom"][floor(x/3)];c.textAlign=["left","center","right"][x%3]}
