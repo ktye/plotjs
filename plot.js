@@ -5,7 +5,9 @@ let pd=function(e){e.preventDefault();e.stopPropagation()}
 let ct=(x,y)=>x.classList.contains(y)
 let vmin=x=>Math.min(...x),vmax=x=>Math.max(...x),min=Math.min,max=Math.max,floor=Math.floor,ceil=Math.ceil
 
-function plots(p,canvas,slider,listbx){
+function replot(canvas){console.log("replot");plots(canvas.plots,canvas,canvas.slider,canvas.listbx)}
+
+function plots(p,canvas,slider,listbx){console.log("plots")
  canvas.width=canvas.clientWidth;canvas.height=canvas.clientHeight
  let width,height;[width,height]=[canvas.width,canvas.height]
  let c=canvas.getContext("2d")
@@ -34,8 +36,9 @@ function plots(p,canvas,slider,listbx){
   }
  }
  
- let replot=function(force){if((canvas.clientWidth!=width)||(canvas.clientHeight!=height)||force===true)plots(p,canvas,slider,listbx)}
- {let r;window.addEventListener("resize",function(){clearTimeout(r);r=setTimeout(replot, 200)})}
+ canvas.plots=p;canvas.slider=slider;canvas.listbx=listbx
+ //let replot=function(force){if((canvas.clientWidth!=width)||(canvas.clientHeight!=height)||force===true)plots(p,canvas,slider,listbx)}
+ //{let r;window.addEventListener("resize",function(){clearTimeout(r);r=setTimeout(replot, 200)})}
  
  canvas.ondblclick=function(e){
   let r=e.target.getBoundingClientRect()
@@ -47,7 +50,7 @@ function plots(p,canvas,slider,listbx){
    slider.min=0;slider.max=p.plots[ri].lines[line].y.length-1
    slider.value=point
   }
-  replot(true)
+  replot(canvas)
  }
  if(slider!==undefined){
   slider.ondblclick=function(e){
@@ -55,11 +58,11 @@ function plots(p,canvas,slider,listbx){
    canvas.classList.toggle("plot-canvas-h");canvas.classList.toggle("plot-canvas-v")
    slider.classList.toggle("plot-slider-h");slider.classList.toggle("plot-slider-v")
    listbx.classList.toggle("plot-listbx-h");listbx.classList.toggle("plot-listbx-v")
-   replot(true)
+   replot(canvas)
   }
   slider.onchange=function(e){
    p.hi.point=slider.value
-   replot(true)
+   replot(canvas)
   }
  }
  if(listbx!==undefined){
@@ -70,7 +73,7 @@ function plots(p,canvas,slider,listbx){
   listbx.onchange=function(e){
    p.hi.lines=Array.from(e.target.selectedOptions).map(x=>x.index)
    p.hi.point=null
-   replot(true)
+   replot(canvas)
   }
  }
  //..
@@ -87,8 +90,9 @@ function plot(p,c,w,h,plts){
  //c.translate(floor(w/2),floor(h/2))
  c.fillStyle=c.strokeStyle="black";c.lineWidth=2
  switch(p.type){
- case"xy":   return    xyplot(p,c,w,h,plts)
- case"polar":return polarplot(p,c,w,h,plts)
+ case"xy":    return     xyplot(p,c,w,h,plts)
+ case"polar": return  polarplot(p,c,w,h,plts)
+ case"ampang":return ampangplot(p,c,w,h,plts)
  default:throw new Error("unknown plot type: "+p.type)
 }}
 
@@ -124,7 +128,6 @@ function polarplot(p,c,w,h,plts){if(!p.lines)return;c.translate(floor(w/2),floor
   let hp=j=>hipoint(plts,i,j)
   x.map((x,i)=>{c.beginPath();c.arc(sc*x,sc*y[i],s*hp(i),0,2*Math.PI);c.fill()})
   x.map((x,i)=>{if(hp(i)>1)mark(i)})}
- c.strokeRect(-w/2,-h/2,w,h)
  c.translate(0,floor(plts.tih/2))
  circle(c,0,0,ra)
  c.textAlign="center";c.textBaseline="bottom"
@@ -135,6 +138,10 @@ function polarplot(p,c,w,h,plts){if(!p.lines)return;c.translate(floor(w/2),floor
  c.strokeStyle="#ccc";ncTic(0,r1).slice(1,-1).map(t=>circle(c,0,0,sc*t))
  c.beginPath();c.moveTo(-ra,0);c.lineTo(ra,0);c.stroke();c.beginPath();c.moveTo(0,-ra);c.lineTo(0,ra);c.stroke()
  c.beginPath();c.arc(0,0,ra,0,2*Math.PI);c.clip();p.lines.map(ln);return(l,j)=>[floor(w/2)+sc*l.y[j],floor(h/2)+floor(plts.tih/2)+sc*l.z[j]]
+}
+function ampangplot(p,c,w,h,plts){if(!p.lines)return;let l=p.lines
+ for(let i=0;i<l.length;i++)if(l[i].z!==null){for(let j=0;j<l[i].y.length;j++)l[i].y[j]=Math.hypot(l[i].y[j],l[i].z[i]);l[i].z=null}
+ p.lines=l;xyplot(p,c,w,h,plts)
 }
 function h1(plts){let h=parseFloat(plts.font1);return isNaN(h)?20:ceil(h)}
 function h2(plts){let h=parseFloat(plts.font2);return isNaN(h)?14:ceil(h)}
@@ -197,5 +204,5 @@ function ncTic(x,y){let [p,_,s]=ncLim(x,y),r=[];while(p<=y){if(p>=x)r.push(p);p+
 
 function rm(p){while(p.firstChild)p.removeChild(p.firstChild);return p}
 
-return{plots:plots}
+return{plots:plots,replot:replot}
 })()
