@@ -5,13 +5,14 @@ let pd=function(e){e.preventDefault();e.stopPropagation()}
 let ct=(x,y)=>x.classList.contains(y)
 let vmin=x=>Math.min(...x),vmax=x=>Math.max(...x),min=Math.min,max=Math.max,floor=Math.floor,ceil=Math.ceil
 
-function replot(canvas){console.log("replot");plots(canvas.plots,canvas,canvas.slider,canvas.listbx)}
+function replot(canvas){plots(canvas.plots,canvas,canvas.slider,canvas.listbx)}
 
-function plots(p,canvas,slider,listbx){console.log("plots")
+function plots(p,canvas,slider,listbx){
  canvas.width=canvas.clientWidth;canvas.height=canvas.clientHeight
  let width,height;[width,height]=[canvas.width,canvas.height]
  let c=canvas.getContext("2d")
  
+ p=(p===null)?{}:p
  p.equal  =("equal" in p)?p.equal :false
  p.colors =("colors"in p)?p.colors:"#003FFF,#03ED3A,#E8000B,#8A2BE2,#FFC400,#00D7FF".split(",")
  p.cols   =("cols"  in p)?p.cols  :0
